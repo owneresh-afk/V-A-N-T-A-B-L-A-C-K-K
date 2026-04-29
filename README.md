@@ -32,3 +32,4 @@ python bot.py
 - `/proxytest` followed by proxy list (one per line)
 - `/recon <seed keyword>`
 - `/analyze`
+- `/help` (shows the full main menu and command usage guide)

@@ -13,7 +13,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 import httpx
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import KeyboardButton, Message, ReplyKeyboardMarkup
 from dotenv import load_dotenv
 from aiohttp import web
 
@@ -36,6 +36,47 @@ DORK_FOOTPRINTS = [
     "view_item.php?id=",
 ]
 DB_ERRORS = ["SQL syntax", "MariaDB", "MySQL", "PostgreSQL"]
+
+
+MAIN_MENU_TEXT = """🔥 *Bug Bounty Intelligence Dashboard*
+
+Choose a feature from the menu buttons below or run a command directly:
+
+• /gen — Generate a new license key (admin)
+  Usage: `/gen`
+
+• /redeem — Activate a license key
+  Usage: `/redeem ABCDE-12345-ABCDE-12345`
+
+• /status — View current license status
+  Usage: `/status`
+
+• /proxytest — Validate proxies against Google
+  Usage:
+`/proxytest`
+`http://user:pass@ip:port`
+`http://ip:port`
+
+• /recon — Run recon pipeline (keyword expansion + dork mapping + indexing)
+  Usage: `/recon your seed keyword`
+
+• /analyze — Run SQL error signature analyzer from `targets.txt`
+  Usage: `/analyze`
+
+ℹ️ Notes:
+- Recon/analyzer require valid proxies from /proxytest.
+- Access is restricted to the admin account.
+"""
+
+
+def build_main_menu() -> ReplyKeyboardMarkup:
+    rows = [
+        [KeyboardButton(text="/gen"), KeyboardButton(text="/redeem")],
+        [KeyboardButton(text="/status"), KeyboardButton(text="/proxytest")],
+        [KeyboardButton(text="/recon"), KeyboardButton(text="/analyze")],
+        [KeyboardButton(text="/help")],
+    ]
+    return ReplyKeyboardMarkup(keyboard=rows, resize_keyboard=True)
 
 
 @dataclass
@@ -267,7 +308,15 @@ async def start(m: Message):
     if not ensure_admin(m):
         await m.answer("Unauthorized.")
         return
-    await m.answer("Bug Bounty Intelligence Dashboard bot online.")
+    await m.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu(), parse_mode="Markdown")
+
+
+@dp.message(Command("help"))
+async def help_menu(m: Message):
+    if not ensure_admin(m):
+        await m.answer("Unauthorized.")
+        return
+    await m.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu(), parse_mode="Markdown")
 
 
 @dp.message(Command("gen"))
