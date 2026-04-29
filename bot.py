@@ -240,7 +240,7 @@ async def analyze_urls(urls: list[str], proxies: list[str], msg: Message) -> lis
 
 
 
-async def start_web_server() -> None:
+async def start_web_server() -> web.AppRunner:
     async def health(_: web.Request) -> web.Response:
         return web.json_response({"status": "ok"})
 
@@ -253,10 +253,8 @@ async def start_web_server() -> None:
     port = int(os.environ.get("PORT", "10000"))
     site = web.TCPSite(runner, host="0.0.0.0", port=port)
     await site.start()
-    print(f"[web] health server listening on 0.0.0.0:{port}")
-
-    # Keep this task alive so Render can continue probing the open port.
-    await asyncio.Event().wait()
+    print(f"[web] health server listening on 0.0.0.0:{port}", flush=True)
+    return runner
 
 # =========================
 # Bot handlers
@@ -360,12 +358,18 @@ async def analyze(m: Message):
 
 
 async def main():
-    if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is not set in .env")
     init_db()
-    asyncio.create_task(start_web_server())
+    runner = await start_web_server()
+
+    if not BOT_TOKEN:
+        print("[bot] BOT_TOKEN is not set; health server remains active.", flush=True)
+        await asyncio.Event().wait()
+
     bot = Bot(BOT_TOKEN)
-    await dp.start_polling(bot)
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await runner.cleanup()
 
 
 if __name__ == "__main__":
